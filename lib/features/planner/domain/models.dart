@@ -1,55 +1,120 @@
 import 'package:flutter/material.dart';
 
-/// A unit of work placed on the timeline map.
+/// A unit of work. It is either *fixed* (the user chose its time, e.g. a
+/// meeting) or *flexible* (only an estimate, deadline and priority are known
+/// and the auto-planner finds a slot for it).
 @immutable
 class PlanTask {
   const PlanTask({
     required this.id,
     required this.title,
-    required this.start,
-    required this.end,
+    this.start,
+    this.end,
+    this.estimateMinutes = 60,
+    this.deadline,
+    this.priority = 1,
+    this.fixed = false,
     this.done = false,
+    this.autoPlaced = false,
   });
 
   final String id;
   final String title;
-  final DateTime start;
-  final DateTime end;
+  final DateTime? start;
+  final DateTime? end;
+
+  /// How long the task takes. Drives the planner for flexible tasks.
+  final int estimateMinutes;
+
+  /// Latest moment the task should finish (flexible tasks only).
+  final DateTime? deadline;
+
+  /// 0 = low, 1 = normal, 2 = high.
+  final int priority;
+
+  /// True when the user chose the time themselves; the planner never moves it.
+  final bool fixed;
   final bool done;
 
-  Duration get duration => end.difference(start);
+  /// True when the current start/end was chosen by the planner.
+  final bool autoPlaced;
+
+  bool get scheduled => start != null && end != null;
+
+  Duration get duration =>
+      scheduled ? end!.difference(start!) : Duration(minutes: estimateMinutes);
 
   bool overlaps(DateTime from, DateTime to) =>
-      start.isBefore(to) && end.isAfter(from);
+      scheduled && start!.isBefore(to) && end!.isAfter(from);
 
   PlanTask copyWith({
     String? title,
     DateTime? start,
     DateTime? end,
+    int? estimateMinutes,
+    DateTime? deadline,
+    bool clearDeadline = false,
+    int? priority,
+    bool? fixed,
     bool? done,
+    bool? autoPlaced,
   }) => PlanTask(
     id: id,
     title: title ?? this.title,
     start: start ?? this.start,
     end: end ?? this.end,
+    estimateMinutes: estimateMinutes ?? this.estimateMinutes,
+    deadline: clearDeadline ? null : (deadline ?? this.deadline),
+    priority: priority ?? this.priority,
+    fixed: fixed ?? this.fixed,
     done: done ?? this.done,
+    autoPlaced: autoPlaced ?? this.autoPlaced,
+  );
+
+  /// Back to the inbox: keeps everything except the time slot.
+  PlanTask unscheduled() => PlanTask(
+    id: id,
+    title: title,
+    estimateMinutes: estimateMinutes,
+    deadline: deadline,
+    priority: priority,
+    done: done,
   );
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
-    'start': start.toIso8601String(),
-    'end': end.toIso8601String(),
+    'start': start?.toIso8601String(),
+    'end': end?.toIso8601String(),
+    'estimate': estimateMinutes,
+    'deadline': deadline?.toIso8601String(),
+    'priority': priority,
+    'fixed': fixed,
     'done': done,
+    'autoPlaced': autoPlaced,
   };
 
-  factory PlanTask.fromJson(Map<String, dynamic> j) => PlanTask(
-    id: j['id'] as String,
-    title: j['title'] as String,
-    start: DateTime.parse(j['start'] as String),
-    end: DateTime.parse(j['end'] as String),
-    done: j['done'] as bool? ?? false,
-  );
+  factory PlanTask.fromJson(Map<String, dynamic> j) {
+    DateTime? d(String k) =>
+        j[k] == null ? null : DateTime.parse(j[k] as String);
+    final start = d('start');
+    final end = d('end');
+    return PlanTask(
+      id: j['id'] as String,
+      title: j['title'] as String,
+      start: start,
+      end: end,
+      // v1 data had no estimate/fixed: derive them from the stored times.
+      estimateMinutes:
+          j['estimate'] as int? ??
+          (start != null && end != null ? end.difference(start).inMinutes : 60),
+      deadline: d('deadline'),
+      priority: j['priority'] as int? ?? 1,
+      fixed: j['fixed'] as bool? ?? start != null,
+      done: j['done'] as bool? ?? false,
+      autoPlaced: j['autoPlaced'] as bool? ?? false,
+    );
+  }
 }
 
 /// A project is a lane on the map, holding tasks.

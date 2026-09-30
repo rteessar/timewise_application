@@ -2,6 +2,7 @@
 abstract final class AppConstants {
   static const String appName = 'TimeWise';
   static const String storageKey = 'timewise.planner.v1';
+  static const String habitKey = 'timewise.habit.v1';
   static const String themeKey = 'timewise.themeMode';
 
   static const Duration shortAnimation = Duration(milliseconds: 200);

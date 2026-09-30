@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../planner/application/planner_controller.dart';
+import '../../planner/domain/auto_planner.dart';
 import '../../planner/domain/models.dart';
+import '../../planner/presentation/auto_plan_action.dart';
+import '../../planner/presentation/task_format.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -12,6 +15,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projects = ref.watch(plannerProvider);
+    final profile = ref.watch(habitProvider);
     final now = DateTime.now();
     final dayStart = DateTime(now.year, now.month, now.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
@@ -20,15 +24,25 @@ class DashboardScreen extends ConsumerWidget {
       for (final p in projects)
         for (final t in p.tasks)
           if (t.overlaps(dayStart, dayEnd)) (p, t),
-    ]..sort((a, b) => a.$2.start.compareTo(b.$2.start));
+    ]..sort((a, b) => a.$2.start!.compareTo(b.$2.start!));
 
     final overdue = <(Project, PlanTask)>[
       for (final p in projects)
         for (final t in p.tasks)
-          if (!t.done && t.end.isBefore(now)) (p, t),
+          if (!t.done &&
+              ((t.scheduled && t.end!.isBefore(now)) ||
+                  (!t.scheduled &&
+                      t.deadline != null &&
+                      t.deadline!.isBefore(now))))
+            (p, t),
     ];
+    final toPlace = projects
+        .expand((p) => p.tasks)
+        .where((t) => !t.fixed && !t.done && !t.scheduled)
+        .length;
     final allTasks = projects.expand((p) => p.tasks).toList();
     final doneCount = allTasks.where((t) => t.done).length;
+    final stats = timeStats(busySpans(projects), profile, now, dayEnd);
 
     return Scaffold(
       appBar: AppBar(title: const Text('TimeWise')),
@@ -47,12 +61,16 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _Stat('Today', '${today.length}', Icons.today),
               _Stat(
-                'Overdue',
-                '${overdue.length}',
-                Icons.warning_amber,
-                alert: overdue.isNotEmpty,
+                'Free today',
+                formatMinutes(stats.usableMinutes),
+                Icons.spa_outlined,
+              ),
+              _Stat(
+                'Lost to gaps',
+                formatMinutes(stats.wastedMinutes),
+                Icons.hourglass_bottom,
+                alert: stats.wastedMinutes >= 60,
               ),
               _Stat(
                 'Done',
@@ -61,6 +79,24 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
+          if (toPlace > 0) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.auto_awesome),
+                title: Text(
+                  '$toPlace task${toPlace == 1 ? '' : 's'} need a slot',
+                ),
+                subtitle: const Text(
+                  'Let TimeWise fit them into your free time',
+                ),
+                trailing: FilledButton(
+                  onPressed: () => runAutoPlan(context, ref),
+                  child: const Text('Plan'),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           _Section('Today'),
           if (today.isEmpty)
@@ -75,9 +111,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           _Section('Projects'),
           if (projects.isEmpty)
-            const _Hint(
-              'No projects yet. Tap "Project" to create your first lane.',
-            )
+            const _Hint('No projects yet. Tap "Project" to create one.')
           else
             for (final p in projects) _ProjectCard(project: p),
         ],
@@ -143,27 +177,23 @@ class _TaskRow extends ConsumerWidget {
   final PlanTask task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final time = DateFormat('d MMM HH:mm');
-    return Card(
-      child: ListTile(
-        leading: Checkbox(
-          value: task.done,
-          activeColor: project.color,
-          onChanged: (_) => ref
-              .read(plannerProvider.notifier)
-              .toggleDone(project.id, task.id),
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.done ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: Text('${project.name} · ${time.format(task.start)}'),
+  Widget build(BuildContext context, WidgetRef ref) => Card(
+    child: ListTile(
+      leading: Checkbox(
+        value: task.done,
+        activeColor: project.color,
+        onChanged: (_) =>
+            ref.read(plannerProvider.notifier).toggleDone(project.id, task.id),
       ),
-    );
-  }
+      title: Text(
+        task.title,
+        style: TextStyle(
+          decoration: task.done ? TextDecoration.lineThrough : null,
+        ),
+      ),
+      subtitle: Text('${project.name} · ${taskWhen(task)}'),
+    ),
+  );
 }
 
 class _ProjectCard extends StatelessWidget {

@@ -4,12 +4,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../planner/application/planner_controller.dart';
 import '../../planner/domain/models.dart';
 import '../../planner/presentation/task_editor.dart';
+import '../../planner/presentation/task_sheet.dart';
 import 'timeline_layout.dart';
 import 'timeline_painter.dart';
 
@@ -81,26 +81,13 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     }
   }
 
-  void _openTask(BarRect bar, List<Project> projects) {
+  void _openTask(BarRect bar) {
     setState(() => _selected = bar.task.id);
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => _TaskSheet(
-        project: bar.project,
-        task: bar.task,
-        onEdit: () async {
-          Navigator.pop(ctx);
-          final r = await showTaskEditor(
-            context,
-            projects: projects,
-            projectId: bar.project.id,
-            task: bar.task,
-          );
-          if (r != null) {
-            ref.read(plannerProvider.notifier).upsertTask(r.projectId, r.task);
-          }
-        },
-      ),
+    showTaskSheet(
+      context,
+      ref,
+      project: bar.project,
+      task: bar.task,
     ).whenComplete(() {
       if (mounted) setState(() => _selected = null);
     });
@@ -176,7 +163,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           final p = d.localPosition + Offset(0, _scrollY);
                           if (d.localPosition.dy < kHeaderHeight) return;
                           final bar = layout.barAt(p);
-                          if (bar != null) _openTask(bar, projects);
+                          if (bar != null) _openTask(bar);
                         },
                         onLongPressStart: (d) {
                           if (d.localPosition.dy < kHeaderHeight) return;
@@ -292,75 +279,6 @@ class _ZoomBar extends StatelessWidget {
     if (ppd >= 24) return 'Days';
     if (ppd >= 6) return 'Weeks';
     return 'Months';
-  }
-}
-
-class _TaskSheet extends ConsumerWidget {
-  const _TaskSheet({
-    required this.project,
-    required this.task,
-    required this.onEdit,
-  });
-  final Project project;
-  final PlanTask task;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final fmt = DateFormat('EEE d MMM, HH:mm');
-    final notifier = ref.read(plannerProvider.notifier);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(radius: 6, backgroundColor: project.color),
-                const SizedBox(width: 8),
-                Text(
-                  project.name,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(task.title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 4),
-            Text('${fmt.format(task.start)}  →  ${fmt.format(task.end)}'),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              children: [
-                FilledButton.icon(
-                  icon: Icon(task.done ? Icons.undo : Icons.check),
-                  label: Text(task.done ? 'Mark as open' : 'Mark done'),
-                  onPressed: () {
-                    notifier.toggleDone(project.id, task.id);
-                    Navigator.pop(context);
-                  },
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit'),
-                  onPressed: onEdit,
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete'),
-                  onPressed: () {
-                    notifier.deleteTask(project.id, task.id);
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

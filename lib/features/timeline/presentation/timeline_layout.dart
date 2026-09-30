@@ -51,13 +51,14 @@ class TimelineLayout {
     final bars = <BarRect>[];
     var y = kHeaderHeight;
     for (final p in projects) {
-      final sorted = [...p.tasks]..sort((a, b) => a.start.compareTo(b.start));
+      final sorted = [...p.tasks.where((t) => t.scheduled)]
+        ..sort((a, b) => a.start!.compareTo(b.start!));
       final rowEnds = <double>[];
       final placed = <(PlanTask, double, double, int)>[];
       for (final t in sorted) {
-        final x0 = (dayOf(t.start) - leftDay) * pixelsPerDay;
+        final x0 = (dayOf(t.start!) - leftDay) * pixelsPerDay;
         final w = math.max(
-          (dayOf(t.end) - dayOf(t.start)) * pixelsPerDay,
+          (dayOf(t.end!) - dayOf(t.start!)) * pixelsPerDay,
           28.0,
         );
         var row = rowEnds.indexWhere((e) => e + 4 <= x0);

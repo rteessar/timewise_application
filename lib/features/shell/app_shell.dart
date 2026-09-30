@@ -14,14 +14,24 @@ class AppShell extends StatelessWidget {
           shell.goBranch(i, initialLocation: i == shell.currentIndex),
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: Icon(Icons.today_outlined),
+          selectedIcon: Icon(Icons.today),
+          label: 'Today',
         ),
         NavigationDestination(
           icon: Icon(Icons.map_outlined),
           selectedIcon: Icon(Icons.map),
           label: 'Map',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.checklist),
+          selectedIcon: Icon(Icons.checklist_rtl),
+          label: 'Tasks',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.timeline),
+          selectedIcon: Icon(Icons.timeline),
+          label: 'Timeline',
         ),
         NavigationDestination(
           icon: Icon(Icons.settings_outlined),
