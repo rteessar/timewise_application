@@ -7,6 +7,8 @@ import 'package:timewise_application/features/planner/application/planner_contro
 import 'package:timewise_application/features/planner/domain/auto_planner.dart';
 import 'package:timewise_application/features/planner/domain/habit_profile.dart';
 import 'package:timewise_application/features/planner/domain/models.dart';
+import 'package:timewise_application/features/map/presentation/map_layout.dart';
+import 'package:timewise_application/features/map/presentation/map_viewport.dart';
 import 'package:timewise_application/features/timeline/presentation/timeline_layout.dart';
 
 Future<ProviderContainer> _boot(
@@ -27,6 +29,7 @@ Future<ProviderContainer> _boot(
 
 void main() {
   plannerTests();
+  mapTests();
   test('project JSON round-trips', () {
     final p = Project(
       id: 'a',
@@ -84,7 +87,8 @@ void main() {
     final container = await _boot(tester);
 
     // Starts on the time map.
-    expect(find.text('Time map'), findsWidgets);
+    expect(find.text('Map'), findsWidgets);
+    expect(find.byTooltip('Zoom in'), findsOneWidget);
 
     await tester.tap(find.text('Tasks').last);
     await tester.pumpAndSettle();
@@ -140,6 +144,41 @@ void main() {
     final h = container.read(habitProvider);
     expect(h.signals, 1);
     expect(h.weightAt(start.hour), greaterThan(1));
+  });
+
+  testWidgets('map drags in 2D, zooms and flings without errors', (
+    tester,
+  ) async {
+    final container = await _boot(tester);
+    container
+        .read(plannerProvider.notifier)
+        .upsertProject(
+          Project(
+            id: 'p',
+            name: 'Work',
+            colorValue: 0xFF6366F1,
+            tasks: [
+              PlanTask(
+                id: 't',
+                title: 'Ship it',
+                start: DateTime.now(),
+                end: DateTime.now().add(const Duration(hours: 3)),
+                fixed: true,
+              ),
+            ],
+          ),
+        );
+    await tester.pumpAndSettle();
+    final map = find.byType(CustomPaint).last;
+    await tester.drag(map, const Offset(-300, -120));
+    await tester.pump();
+    await tester.fling(map, const Offset(400, 200), 2000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.tap(find.byTooltip('Zoom out'));
+    await tester.tap(find.byTooltip('Jump to today'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('timeline tab pans and zooms without errors', (tester) async {
@@ -371,5 +410,81 @@ void plannerTests() {
     });
     expect(t.fixed, isTrue);
     expect(t.estimateMinutes, 90);
+  });
+}
+
+// -------------------------------------------------------------------- map --
+
+void mapTests() {
+  const size = Size(400, 800);
+  MapViewport vp({double leftDay = 20000, double top = 6, double zoom = 1}) =>
+      MapViewport(leftDay: leftDay, topHour: top, zoom: zoom, size: size);
+
+  group('MapViewport', () {
+    test('x/day and y/hour conversions are inverse', () {
+      final v = vp(leftDay: 20000.3, top: 7.5, zoom: 1.7);
+      expect(v.dayAtX(v.xOfDay(20003.25)), closeTo(20003.25, 1e-9));
+      expect(v.hourAtY(v.yOfHour(13.5)), closeTo(13.5, 1e-9));
+    });
+
+    test('zoomAt keeps the point under the finger fixed', () {
+      final v = vp(zoom: 1);
+      const focal = Offset(250, 300);
+      final day = v.dayAtX(focal.dx), hour = v.hourAtY(focal.dy);
+      final z = v.zoomAt(focal, 2);
+      expect(z.zoom, 2);
+      expect(z.dayAtX(focal.dx), closeTo(day, 1e-9));
+      expect(z.hourAtY(focal.dy), closeTo(hour, 1e-9));
+    });
+
+    test('zoom is clamped and vertical pan stays inside the day', () {
+      final v = vp().zoomAt(const Offset(100, 100), 1000);
+      expect(v.zoom, MapViewport.maxZoom);
+      final up = vp().panBy(const Offset(0, 100000));
+      expect(up.topHour, -0.25);
+      final down = vp().panBy(const Offset(0, -100000));
+      expect(down.topHour + down.visibleHours, closeTo(24.25, 1e-9));
+    });
+
+    test('horizontal pan is unbounded and moves by days', () {
+      final v = vp();
+      final moved = v.panBy(Offset(-v.columnWidth * 400, 0));
+      expect(moved.leftDay, closeTo(v.leftDay + 400, 1e-9));
+    });
+  });
+
+  test('a task across midnight is split into one bar per day', () {
+    final d = DateTime(2030, 1, 7);
+    final v = vp(leftDay: dayNumber(d).toDouble() - 1, top: 0, zoom: 0.5);
+    final bars = layoutBars([
+      Project(
+        id: 'p',
+        name: 'P',
+        colorValue: 0xFF000000,
+        tasks: [
+          PlanTask(
+            id: 't',
+            title: 'Night shift',
+            start: DateTime(2030, 1, 7, 22),
+            end: DateTime(2030, 1, 8, 6),
+            fixed: true,
+          ),
+          PlanTask(
+            id: 'u',
+            title: 'Ends at midnight',
+            start: DateTime(2030, 1, 7, 20),
+            end: DateTime(2030, 1, 8),
+            fixed: true,
+          ),
+        ],
+      ),
+    ], v);
+    expect(bars.where((b) => b.task.id == 't'), hasLength(2));
+    expect(bars.where((b) => b.task.id == 'u'), hasLength(1));
+    final first = bars.firstWhere((b) => b.task.id == 't');
+    final second = bars.lastWhere((b) => b.task.id == 't');
+    expect(second.rect.left, greaterThan(first.rect.left));
+    expect(first.rect.bottom, closeTo(v.yOfHour(24), 1e-9));
+    expect(second.rect.top, closeTo(v.yOfHour(0), 1e-9));
   });
 }

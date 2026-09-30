@@ -5,9 +5,13 @@ free gaps between your commitments, and places your tasks in them, learning
 which hours suit you.
 
 ## How it works
-- **Time map** – a week/3-day grid. Green is free time (brighter at your best
-  hours), hatched orange is free time too short to use, blocks are
-  commitments. Tap an empty slot to add a fixed event, tap a block to act on it.
+- **Map** – a 2D canvas of your time. Drag in any direction: sideways moves
+  through days without limit, up/down moves through the hours of the day.
+  Pinch (or Ctrl/Cmd + scroll) to zoom from single hours out to several
+  weeks; fling to glide; scroll or two-finger swipe pans. Green is free time
+  (brighter at your best hours), hatched orange is free time too short to
+  use, blocks are commitments. Tap an empty slot to add a fixed event, tap a
+  block to act on it.
 - **Flexible tasks** – give a task an estimate, optional deadline and priority
   and choose *Find me a slot*. **Auto-plan** places every flexible task into
   free working time: urgent first, packed tightly against other commitments,
@@ -28,7 +32,7 @@ lib/
   core/        theme, router, constants
   features/
     planner/   domain (tasks, habit profile, AutoPlanner), state, task editor
-    weekmap/   the time map
+    map/       the pannable, zoomable time map
     tasks/     inbox of tasks waiting for a slot
     timeline/  zoomable project timeline
     dashboard/ project_composer/ settings/ shell/
