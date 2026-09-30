@@ -1,12 +1,12 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/map/presentation/map_screen.dart';
 import '../../features/project_composer/presentation/project_composer_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
 import '../../features/timeline/presentation/timeline_screen.dart';
-import '../../features/weekmap/presentation/week_screen.dart';
 
 GoRouter createRouter() => GoRouter(
   initialLocation: '/map',
@@ -20,9 +20,7 @@ GoRouter createRouter() => GoRouter(
           ],
         ),
         StatefulShellBranch(
-          routes: [
-            GoRoute(path: '/map', builder: (_, _) => const WeekScreen()),
-          ],
+          routes: [GoRoute(path: '/map', builder: (_, _) => const MapScreen())],
         ),
         StatefulShellBranch(
           routes: [
