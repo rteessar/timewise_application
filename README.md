@@ -1,16 +1,31 @@
-# timewise_application
+# TimeWise
 
-A new Flutter project.
+Plan your time on a **map**. TimeWise lays your projects out as lanes on an
+endless, zoomable timeline: pinch (or scroll) to zoom from months down to
+hours, drag to pan, tap a task to act on it, long-press a lane to drop a new
+task exactly where you pressed.
 
-## Getting Started
+## Features
+- **Map** – pan/zoom timeline canvas, one lane per project, overlapping tasks
+  auto-stack, live "now" line, zoom presets, jump to today.
+- **Dashboard** – today, overdue, progress per project.
+- **Project composer** – name, colour and tasks for a project.
+- **Settings** – light/dark/system theme, clear data.
+- Everything is stored locally (`shared_preferences`), no account needed.
 
-This project is a starting point for a Flutter application.
+## Structure
+```
+lib/
+  core/        theme, router, constants
+  features/
+    planner/   domain models, persistence, Riverpod state, task editor
+    timeline/  the map: layout, painter, gestures
+    dashboard/ project_composer/ settings/ shell/
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+```
+flutter pub get
+flutter run
+flutter test
+```

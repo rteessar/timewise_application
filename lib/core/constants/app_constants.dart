@@ -1,25 +1,16 @@
-/// Application-wide constants for TimeWise
+/// Application-wide constants for TimeWise.
 abstract final class AppConstants {
-  // App Info
   static const String appName = 'TimeWise';
-  static const String appVersion = '1.0.0';
+  static const String storageKey = 'timewise.planner.v1';
+  static const String themeKey = 'timewise.themeMode';
 
-  // Database
-  static const String isarDbName = 'timewise_db';
-
-  // Animation Durations
   static const Duration shortAnimation = Duration(milliseconds: 200);
-  static const Duration mediumAnimation = Duration(milliseconds: 350);
-  static const Duration longAnimation = Duration(milliseconds: 500);
 
-  // Timeline Calendar
-  static const double minZoomLevel = 0.5;
-  static const double maxZoomLevel = 4.0;
-  static const double defaultZoomLevel = 1.0;
+  // Timeline map zoom, expressed as logical pixels per day.
+  static const double minPixelsPerDay = 2; // ~ years at a glance
+  static const double maxPixelsPerDay = 2400; // ~ hours at a glance
+  static const double defaultPixelsPerDay = 48;
 
-  // Layout
-  static const double defaultPadding = 16.0;
-  static const double smallPadding = 8.0;
-  static const double largePadding = 24.0;
-  static const double defaultBorderRadius = 12.0;
+  static const double defaultPadding = 16;
+  static const double defaultBorderRadius = 12;
 }
