@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../planner/application/planner_controller.dart';
 import '../../planner/domain/models.dart';
 import '../../planner/presentation/task_editor.dart';
+import '../../planner/presentation/task_format.dart';
 
 /// Create or edit a project (a lane) together with its tasks.
 /// Changes are kept in a local draft and committed on Save.
@@ -65,17 +65,21 @@ class _State extends ConsumerState<ProjectComposerScreen> {
     );
     if (r == null) return;
     setState(() {
-      _tasks = [
-        for (final t in _tasks)
-          if (t.id != r.task.id) t,
-        r.task,
-      ]..sort((a, b) => a.start.compareTo(b.start));
+      _tasks =
+          [
+            for (final t in _tasks)
+              if (t.id != r.task.id) t,
+            r.task,
+          ]..sort(
+            (a, b) => (a.start ?? DateTime(9999)).compareTo(
+              b.start ?? DateTime(9999),
+            ),
+          );
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('d MMM HH:mm');
     return Scaffold(
       appBar: AppBar(
         title: Text(_isNew ? 'New project' : 'Edit project'),
@@ -175,7 +179,7 @@ class _State extends ConsumerState<ProjectComposerScreen> {
             Card(
               child: ListTile(
                 title: Text(t.title),
-                subtitle: Text('${fmt.format(t.start)} → ${fmt.format(t.end)}'),
+                subtitle: Text(taskWhen(t)),
                 onTap: () => _editTask(t),
                 trailing: IconButton(
                   icon: const Icon(Icons.close),

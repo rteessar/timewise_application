@@ -4,20 +4,29 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/project_composer/presentation/project_composer_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/tasks/presentation/tasks_screen.dart';
 import '../../features/timeline/presentation/timeline_screen.dart';
+import '../../features/weekmap/presentation/week_screen.dart';
 
 GoRouter createRouter() => GoRouter(
-  initialLocation: '/timeline',
+  initialLocation: '/map',
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (_, _, shell) => AppShell(shell: shell),
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(
-              path: '/dashboard',
-              builder: (_, _) => const DashboardScreen(),
-            ),
+            GoRoute(path: '/today', builder: (_, _) => const DashboardScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/map', builder: (_, _) => const WeekScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/tasks', builder: (_, _) => const TasksScreen()),
           ],
         ),
         StatefulShellBranch(
